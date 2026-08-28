@@ -12,7 +12,8 @@ from uuid import uuid4
 from flask import Flask, g, render_template, request, url_for
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get("CRAWLER_GAME_DB_PATH") or BASE_DIR / "crawler_game.db")
+configured_db_path = os.environ.get("CRAWLER_GAME_DB_PATH")
+DB_PATH = Path(configured_db_path) if configured_db_path else BASE_DIR / "crawler_game.db"
 
 app = Flask(__name__)
 
