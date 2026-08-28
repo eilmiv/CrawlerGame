@@ -49,6 +49,17 @@ def init_db() -> None:
         db.executescript(SCHEMA)
 
 
+_db_initialized = False
+
+
+def ensure_db_initialized() -> None:
+    global _db_initialized
+    if _db_initialized:
+        return
+    init_db()
+    _db_initialized = True
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -84,6 +95,7 @@ def normalize_params() -> dict[str, str | int]:
 
 @app.before_request
 def log_request() -> None:
+    ensure_db_initialized()
     params = normalize_params()
     db = get_db()
     db.execute(
@@ -222,7 +234,7 @@ def stats() -> str:
             SELECT created_at, counter, COALESCE(choices, '') AS choices
             FROM request_log
             WHERE path = '/play' AND crawler_id = ?
-            ORDER BY created_at ASC
+            ORDER BY id ASC
             """,
             (top_id,),
         ).fetchall()
@@ -259,8 +271,6 @@ def stats() -> str:
     )
 
 
-init_db()
-
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    ensure_db_initialized()
+    app.run(host="127.0.0.1", port=5000, debug=False)
