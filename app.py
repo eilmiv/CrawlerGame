@@ -153,7 +153,7 @@ def play() -> str:
     next_counter = counter + 1
 
     choice_list = [c for c in choices.split("-") if c]
-    is_decision = counter > 1 and is_power_of_eight(counter)
+    is_decision = counter >= 8 and is_power_of_eight(counter)
 
     next_links: list[dict[str, str]] = []
     if is_decision:
