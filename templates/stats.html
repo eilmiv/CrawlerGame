@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Crawler Game - Statistics{% endblock %}
+{% block content %}
+<h1>Crawler Statistics</h1>
+<p>Top crawler trees by explored nodes.</p>
+<section class="meta">
+  <p><strong>Total requests:</strong> {{ global_stats.total_requests }}</p>
+  <p><strong>Total crawl trees:</strong> {{ global_stats.total_crawl_trees }}</p>
+  <p><strong>Today's requests:</strong> {{ global_stats.today_requests }}</p>
+  <p><strong>Today's crawl trees:</strong> {{ global_stats.today_crawl_trees }}</p>
+</section>
+
+{% if top_timeline %}
+<section class="timeline">
+  <h2>Top Tree Replay</h2>
+  <input id="timelineRange" type="range" min="1" max="{{ top_timeline|length }}" value="{{ top_timeline|length }}">
+  <p id="timelineInfo"></p>
+  <div id="timelinePath" class="path3d"></div>
+</section>
+<script>
+  const timeline = {{ top_timeline_json|safe }};
+  const slider = document.getElementById('timelineRange');
+  const info = document.getElementById('timelineInfo');
+  const path = document.getElementById('timelinePath');
+
+  function renderAt(index) {
+    const entry = timeline[index - 1];
+    const length = Math.min(entry.counter || 0, 60);
+    path.innerHTML = '';
+    for (let i = 0; i < length; i += 1) {
+      const seg = document.createElement('span');
+      seg.className = 'segment';
+      path.appendChild(seg);
+    }
+    const choices = entry.choices.length ? entry.choices.join(' → ') : 'none';
+    info.textContent = `#${index} at ${entry.created_at} | steps: ${entry.counter} | choices: ${choices}`;
+  }
+
+  slider.addEventListener('input', (e) => renderAt(Number(e.target.value)));
+  renderAt(Number(slider.value));
+</script>
+{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      <th>UUID</th>
+      <th>Started</th>
+      <th>Nodes</th>
+      <th>Recrawled Nodes</th>
+      <th>Deepest Path</th>
+      <th>Last Request</th>
+      <th>User Agent Samples</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in scores %}
+    <tr>
+      <td>{{ row.crawler_id }}</td>
+      <td>{{ row.started_on }}</td>
+      <td>{{ row.explored_nodes }}</td>
+      <td>{{ row.recrawled_nodes }}</td>
+      <td>{{ row.deepest_path }}</td>
+      <td>{{ row.last_request_at }}</td>
+      <td>{{ row.user_agents|join(' | ') }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="7">No crawl data yet. Send a crawler into the dungeon.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p><a href="{{ url_for('home') }}">Back to home</a></p>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Crawler Game - Node {{ counter }}{% endblock %}
+{% block content %}
+<h1>Dungeon Node {{ counter }}</h1>
+<p>Welcome crawler. The dungeon expands with every click.</p>
+<section class="meta">
+  <p>Your id is: <strong>{{ crawler_id }}</strong></p>
+  <p>You started your journey on: <strong>{{ started_on }}</strong></p>
+  <p>Your choices were: <strong>{{ choices|join(' → ') if choices else 'none yet' }}</strong></p>
+  <p>You took <strong>{{ counter }}</strong> steps to get here.</p>
+</section>
+
+<div class="path3d">
+  {% for _ in range(counter if counter < 40 else 40) %}
+    <span class="segment"></span>
+  {% endfor %}
+</div>
+
+{% if is_decision %}
+  <p class="decision">Power-of-eight gate reached. Choose your portal:</p>
+{% endif %}
+<ul class="links">
+  {% for item in next_links %}
+    <li><a class="cta" href="{{ item.url }}">{{ item.label }}</a></li>
+  {% endfor %}
+</ul>
+
+<p><a href="{{ url_for('stats') }}">Inspect crawler statistics</a></p>
+{% endblock %}

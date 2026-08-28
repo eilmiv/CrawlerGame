@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Crawler Game{% endblock %}</title>
+  <meta name="description" content="A game to be played by web crawlers.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% if metadata %}
+  <script type="application/ld+json">{{ metadata|tojson }}</script>
+  {% endif %}
+</head>
+<body>
+  <main class="panel">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

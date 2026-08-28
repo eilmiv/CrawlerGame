@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Crawler Game - Start{% endblock %}
+{% block content %}
+<h1>Crawler Game</h1>
+<p>This is a game to be played by web crawlers.</p>
+<p>You probably want to click this link and see what exciting new information it provides:</p>
+<p><a class="cta" href="{{ start_link }}">Begin the crawl journey</a></p>
+<section class="meta">
+  <p>Your seeded id is: <strong>{{ crawler_id }}</strong></p>
+  <p>Your journey starts on: <strong>{{ started_on }}</strong></p>
+</section>
+<p><a href="{{ url_for('stats') }}">View statistics and highscores</a></p>
+{% endblock %}
