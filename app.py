@@ -300,7 +300,7 @@ def stats() -> str:
         SELECT
             COUNT(*) AS total_requests,
             COUNT(DISTINCT CASE WHEN path = '/play' THEN crawler_id END) AS total_crawl_trees,
-            SUM(CASE WHEN substr(created_at, 1, 10) = ? THEN 1 ELSE 0 END) AS today_requests,
+            COALESCE(SUM(CASE WHEN substr(created_at, 1, 10) = ? THEN 1 ELSE 0 END), 0) AS today_requests,
             COUNT(DISTINCT CASE WHEN path = '/play' AND substr(created_at, 1, 10) = ? THEN crawler_id END) AS today_crawl_trees
         FROM request_log
         """,
