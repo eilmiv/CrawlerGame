@@ -4,6 +4,7 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from uuid import uuid4
 
 from flask import Flask, g, render_template, request, url_for
@@ -50,14 +51,18 @@ def init_db() -> None:
 
 
 _db_initialized = False
+_db_init_lock = Lock()
 
 
 def ensure_db_initialized() -> None:
     global _db_initialized
     if _db_initialized:
         return
-    init_db()
-    _db_initialized = True
+    with _db_init_lock:
+        if _db_initialized:
+            return
+        init_db()
+        _db_initialized = True
 
 
 def now_iso() -> str:
@@ -97,6 +102,7 @@ def normalize_params() -> dict[str, str | int]:
 def log_request() -> None:
     ensure_db_initialized()
     params = normalize_params()
+    g.crawler_params = params
     db = get_db()
     db.execute(
         """
@@ -141,13 +147,13 @@ def home() -> str:
 
 @app.route("/play")
 def play() -> str:
-    params = normalize_params()
+    params = getattr(g, "crawler_params", normalize_params())
     counter = int(params["counter"])
     choices = str(params["choices"])
     next_counter = counter + 1
 
     choice_list = [c for c in choices.split("-") if c]
-    is_decision = is_power_of_eight(counter)
+    is_decision = counter > 1 and is_power_of_eight(counter)
 
     next_links: list[dict[str, str]] = []
     if is_decision:
@@ -216,8 +222,7 @@ def stats() -> str:
             MIN(started_on) AS started_on,
             COUNT(*) AS explored_nodes,
             MAX(COALESCE(counter, 0)) AS deepest_path,
-            MAX(created_at) AS last_request_at,
-            GROUP_CONCAT(DISTINCT user_agent) AS user_agents
+            MAX(created_at) AS last_request_at
         FROM request_log
         WHERE path = '/play' AND crawler_id IS NOT NULL
         GROUP BY crawler_id
@@ -251,7 +256,25 @@ def stats() -> str:
 
     formatted_scores = []
     for row in scores:
-        agents = (row["user_agents"] or "").split(",")
+        agent_rows = db.execute(
+            """
+            SELECT user_agent
+            FROM request_log
+            WHERE path = '/play' AND crawler_id = ? AND user_agent IS NOT NULL
+            ORDER BY id DESC
+            LIMIT 20
+            """,
+            (row["crawler_id"],),
+        ).fetchall()
+        seen = set()
+        agents = []
+        for agent_row in agent_rows:
+            user_agent = agent_row["user_agent"]
+            if user_agent not in seen:
+                seen.add(user_agent)
+                agents.append(user_agent)
+            if len(agents) >= 3:
+                break
         formatted_scores.append(
             {
                 "crawler_id": row["crawler_id"],
@@ -259,7 +282,7 @@ def stats() -> str:
                 "explored_nodes": row["explored_nodes"],
                 "deepest_path": row["deepest_path"],
                 "last_request_at": row["last_request_at"],
-                "user_agents": [a for a in agents[:3] if a],
+                "user_agents": agents,
             }
         )
 
