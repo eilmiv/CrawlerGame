@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,7 +12,7 @@ from uuid import uuid4
 from flask import Flask, g, render_template, request, url_for
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "crawler_game.db"
+DB_PATH = Path(os.environ.get("CRAWLER_GAME_DB_PATH", str(BASE_DIR / "crawler_game.db")))
 
 app = Flask(__name__)
 
