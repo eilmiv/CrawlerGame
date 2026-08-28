@@ -3,6 +3,12 @@
 {% block content %}
 <h1>Crawler Statistics</h1>
 <p>Top crawler trees by explored nodes.</p>
+<section class="meta">
+  <p><strong>Total requests:</strong> {{ global_stats.total_requests }}</p>
+  <p><strong>Total crawl trees:</strong> {{ global_stats.total_crawl_trees }}</p>
+  <p><strong>Today's requests:</strong> {{ global_stats.today_requests }}</p>
+  <p><strong>Today's crawl trees:</strong> {{ global_stats.today_crawl_trees }}</p>
+</section>
 
 {% if top_timeline %}
 <section class="timeline">

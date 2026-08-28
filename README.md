@@ -19,3 +19,11 @@ python app.py
 ```
 
 Then open <http://127.0.0.1:5000>.
+
+## Tests and type checking
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+python -m unittest discover -s tests -p "test_*.py"
+mypy app.py tests/test_app.py
+```

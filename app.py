@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
+from typing import TypedDict, cast
 from uuid import uuid4
 
 from flask import Flask, g, render_template, request, url_for
@@ -31,15 +32,22 @@ CREATE TABLE IF NOT EXISTS request_log (
 """
 
 
+class CrawlParams(TypedDict):
+    id: str
+    started: str
+    counter: int
+    choices: str
+
+
 def get_db() -> sqlite3.Connection:
     if "db" not in g:
         g.db = sqlite3.connect(DB_PATH)
         g.db.row_factory = sqlite3.Row
-    return g.db
+    return cast(sqlite3.Connection, g.db)
 
 
 @app.teardown_appcontext
-def close_db(_exception: Exception | None) -> None:
+def close_db(_exception: BaseException | None = None) -> None:
     db = g.pop("db", None)
     if db is not None:
         db.close()
@@ -81,7 +89,7 @@ def is_power_of_eight(value: int) -> bool:
     return value == 1
 
 
-def normalize_params() -> dict[str, str | int]:
+def normalize_params() -> CrawlParams:
     crawler_id = request.args.get("id") or str(uuid4())
     started_on = request.args.get("started") or today_iso_date()
     raw_counter = request.args.get("counter", "0")
@@ -231,7 +239,7 @@ def stats() -> str:
         """
     ).fetchall()
 
-    top_timeline = []
+    top_timeline: list[dict[str, object]] = []
     if scores:
         top_id = scores[0]["crawler_id"]
         rows = db.execute(
@@ -254,7 +262,7 @@ def stats() -> str:
                 }
             )
 
-    formatted_scores = []
+    formatted_scores: list[dict[str, object]] = []
     for row in scores:
         agent_rows = db.execute(
             """
@@ -286,11 +294,31 @@ def stats() -> str:
             }
         )
 
+    today = today_iso_date()
+    global_stats_row = db.execute(
+        """
+        SELECT
+            COUNT(*) AS total_requests,
+            COUNT(DISTINCT CASE WHEN path = '/play' THEN crawler_id END) AS total_crawl_trees,
+            SUM(CASE WHEN substr(created_at, 1, 10) = ? THEN 1 ELSE 0 END) AS today_requests,
+            COUNT(DISTINCT CASE WHEN path = '/play' AND substr(created_at, 1, 10) = ? THEN crawler_id END) AS today_crawl_trees
+        FROM request_log
+        """,
+        (today, today),
+    ).fetchone()
+    global_stats = {
+        "total_requests": global_stats_row["total_requests"] if global_stats_row else 0,
+        "total_crawl_trees": global_stats_row["total_crawl_trees"] if global_stats_row else 0,
+        "today_requests": global_stats_row["today_requests"] if global_stats_row else 0,
+        "today_crawl_trees": global_stats_row["today_crawl_trees"] if global_stats_row else 0,
+    }
+
     return render_template(
         "stats.html",
         scores=formatted_scores,
         top_timeline=top_timeline,
         top_timeline_json=json.dumps(top_timeline),
+        global_stats=global_stats,
     )
 
 
