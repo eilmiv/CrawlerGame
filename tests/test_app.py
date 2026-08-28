@@ -1,3 +1,4 @@
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -41,6 +42,22 @@ class CrawlerGameTests(unittest.TestCase):
         self.assertIn(b"Total crawl trees:</strong> 2", response.data)
         self.assertIn(b"Today's requests:</strong> 4", response.data)
         self.assertIn(b"Today's crawl trees:</strong> 2", response.data)
+
+    def test_stats_page_shows_recrawled_nodes(self) -> None:
+        self.client.get("/play?id=tree-r&started=2026-08-28&counter=3&choices=red")
+        self.client.get("/play?id=tree-r&started=2026-08-28&counter=3&choices=red")
+        response = self.client.get("/stats")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Recrawled Nodes", response.data)
+        html = response.data.decode("utf-8")
+        self.assertRegex(
+            html,
+            re.compile(
+                r"<td>tree-r</td>\s*<td>2026-08-28</td>\s*<td>2</td>\s*<td>1</td>\s*<td>3</td>",
+                re.MULTILINE,
+            ),
+        )
 
 
 if __name__ == "__main__":

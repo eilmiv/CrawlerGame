@@ -229,6 +229,7 @@ def stats() -> str:
             crawler_id,
             MIN(started_on) AS started_on,
             COUNT(*) AS explored_nodes,
+            COUNT(DISTINCT printf('%d|%s', COALESCE(counter, 0), COALESCE(choices, ''))) AS unique_nodes,
             MAX(COALESCE(counter, 0)) AS deepest_path,
             MAX(created_at) AS last_request_at
         FROM request_log
@@ -288,6 +289,7 @@ def stats() -> str:
                 "crawler_id": row["crawler_id"],
                 "started_on": row["started_on"],
                 "explored_nodes": row["explored_nodes"],
+                "recrawled_nodes": row["explored_nodes"] - row["unique_nodes"],
                 "deepest_path": row["deepest_path"],
                 "last_request_at": row["last_request_at"],
                 "user_agents": agents,

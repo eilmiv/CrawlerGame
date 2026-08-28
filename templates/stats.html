@@ -47,6 +47,7 @@
       <th>UUID</th>
       <th>Started</th>
       <th>Nodes</th>
+      <th>Recrawled Nodes</th>
       <th>Deepest Path</th>
       <th>Last Request</th>
       <th>User Agent Samples</th>
@@ -58,13 +59,14 @@
       <td>{{ row.crawler_id }}</td>
       <td>{{ row.started_on }}</td>
       <td>{{ row.explored_nodes }}</td>
+      <td>{{ row.recrawled_nodes }}</td>
       <td>{{ row.deepest_path }}</td>
       <td>{{ row.last_request_at }}</td>
       <td>{{ row.user_agents|join(' | ') }}</td>
     </tr>
     {% else %}
     <tr>
-      <td colspan="6">No crawl data yet. Send a crawler into the dungeon.</td>
+      <td colspan="7">No crawl data yet. Send a crawler into the dungeon.</td>
     </tr>
     {% endfor %}
   </tbody>
