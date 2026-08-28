@@ -1,7 +1,10 @@
+import importlib
+import os
 import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import app as app_module
 
@@ -16,6 +19,16 @@ class CrawlerGameTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self._tmpdir.cleanup()
+
+    def test_db_path_can_be_configured_via_environment(self) -> None:
+        configured_db_path = Path(self._tmpdir.name) / "configured.db"
+
+        try:
+            with patch.dict(os.environ, {"CRAWLER_GAME_DB_PATH": str(configured_db_path)}):
+                importlib.reload(app_module)
+                self.assertEqual(app_module.DB_PATH, configured_db_path)
+        finally:
+            importlib.reload(app_module)
 
     def test_decision_appears_at_power_of_eight(self) -> None:
         response = self.client.get("/play?id=test-tree&started=2026-08-28&counter=8")
