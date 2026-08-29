@@ -116,23 +116,21 @@ def normalize_params() -> CrawlParams:
 def detect_feature() -> str | None:
     if request.path == "/robots.txt":
         return "robots-txt"
-    if request.method == "HEAD" and request.path == "/play":
-        return "head-request"
     if request.path.startswith("/sidequest/"):
         challenge = request.path.removeprefix("/sidequest/")
-        feature_map = {
-            "base": "base",
-            "ignore-robots": "ignore-robots",
-            "nojavascript": "nojavascript",
-            "javascript": "javascript",
-            "javascript-link": "javascript-link",
-            "hidden-link": "hidden-link",
-            "span-link": "span-link",
-            "form-link": "form-link",
-            "form": "form",
-            "post": "post",
+        known_features = {
+            "base",
+            "ignore-robots",
+            "nojavascript",
+            "javascript",
+            "javascript-link",
+            "hidden-link",
+            "span-link",
+            "form-link",
+            "form",
+            "post",
         }
-        return feature_map.get(challenge)
+        return challenge if challenge in known_features else None
     return None
 
 
@@ -280,7 +278,7 @@ def sidequest(challenge: str) -> str:
         "play",
         id=params["id"],
         started=params["started"],
-        counter=int(params["counter"]) + 1,
+        counter=int(params["counter"]),
         choices=params["choices"],
     )
     return render_template(
@@ -297,17 +295,22 @@ def stats() -> str:
     scores = db.execute(
         """
         SELECT
-            crawler_id,
-            MIN(started_on) AS started_on,
+            r.crawler_id,
+            MIN(r.started_on) AS started_on,
             COUNT(*) AS explored_nodes,
-            COUNT(DISTINCT printf('%d|%s', COALESCE(counter, 0), COALESCE(choices, ''))) AS unique_nodes,
-            MAX(COALESCE(counter, 0)) AS deepest_path,
-            MIN(id) AS first_log_id,
-            MIN(created_at) AS first_request_at,
-            MAX(created_at) AS last_request_at
-        FROM request_log
-        WHERE path = '/play' AND crawler_id IS NOT NULL
-        GROUP BY crawler_id
+            COUNT(DISTINCT printf('%d|%s', COALESCE(r.counter, 0), COALESCE(r.choices, ''))) AS unique_nodes,
+            MAX(COALESCE(r.counter, 0)) AS deepest_path,
+            MIN(r.id) AS first_log_id,
+            MIN(r.created_at) AS first_request_at,
+            MAX(r.created_at) AS last_request_at,
+            (
+                SELECT GROUP_CONCAT(DISTINCT feature)
+                FROM request_log f
+                WHERE f.crawler_id = r.crawler_id AND f.feature IS NOT NULL AND f.feature != ''
+            ) AS feature_tags
+        FROM request_log r
+        WHERE r.path = '/play' AND r.crawler_id IS NOT NULL
+        GROUP BY r.crawler_id
         ORDER BY first_log_id ASC
         LIMIT 100
         """
@@ -357,18 +360,8 @@ def stats() -> str:
                 agents.append(user_agent)
             if len(agents) >= 3:
                 break
-        feature_rows = db.execute(
-            """
-            SELECT DISTINCT feature
-            FROM request_log
-            WHERE crawler_id = ? AND feature IS NOT NULL
-            ORDER BY feature ASC
-            """,
-            (row["crawler_id"],),
-        ).fetchall()
-        feature_tags = [feature_row["feature"] for feature_row in feature_rows if feature_row["feature"]]
-        if len(agents) > 1:
-            feature_tags.append("multi-user-agent")
+        feature_csv = row["feature_tags"] or ""
+        feature_tags = sorted({tag for tag in str(feature_csv).split(",") if tag})
         formatted_scores.append(
             {
                 "crawler_id": row["crawler_id"],
@@ -379,7 +372,7 @@ def stats() -> str:
                 "first_request_at": row["first_request_at"],
                 "last_request_at": row["last_request_at"],
                 "user_agents": agents,
-                "feature_tags": sorted(set(feature_tags)),
+                "feature_tags": feature_tags,
             }
         )
 

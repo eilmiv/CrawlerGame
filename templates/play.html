@@ -32,7 +32,7 @@
     <ul class="links">
       <li><a class="cta" href="{{ sidequest_urls.base }}">base</a></li>
       <li><a class="cta" href="{{ sidequest_urls.ignore_robots }}">ignore-robots</a></li>
-      <li><a id="progressive-js-link" class="cta" href="{{ sidequest_urls.nojavascript }}">javascirpt / nojavascript</a></li>
+      <li><a id="progressive-js-link" class="cta" href="{{ sidequest_urls.nojavascript }}">javascript / nojavascript</a></li>
       <li><button type="button" class="cta cta-button" onclick="followJavascriptLink()">javascript-link</button></li>
       <li><a class="cta hidden-link" href="{{ sidequest_urls.hidden_link }}">hidden-link</a></li>
       <li><span class="plain-url">{{ sidequest_urls.span_link }}</span></li>
@@ -42,13 +42,13 @@
         </form>
       </li>
       <li>
-        <form id="assembledForm" method="get" action="/sidequest/base" onsubmit="assembleGetFormAction()">
+        <form id="assembledForm" method="get" action="/sidequest/form" onsubmit="assembleGetFormAction(event)">
           <input type="hidden" name="id" value="{{ crawler_id }}" readonly>
           <input type="hidden" name="started" value="{{ started_on }}" readonly>
           <input type="hidden" name="counter" value="{{ counter }}" readonly>
           <input type="hidden" name="choices" value="{{ choices|join('-') }}" readonly>
-          <input type="text" name="part_a" value="/sidequest" readonly>
-          <input type="text" name="part_b" value="form" readonly>
+          <input id="partA" type="text" value="/sidequest" readonly>
+          <input id="partB" type="text" value="form" readonly>
           <button class="cta cta-button" type="submit">form</button>
         </form>
       </li>
@@ -66,13 +66,15 @@
     if (progressiveLink) {
       progressiveLink.href = progressiveLink.href.replace('nojavascript', 'javascript');
     }
-    const scriptedLink = "{{ sidequest_urls.javascript_link }}";
+    const scriptedLink = {{ sidequest_urls.javascript_link|tojson }};
     function followJavascriptLink() {
       window.location.assign(scriptedLink);
     }
-    function assembleGetFormAction() {
+    function assembleGetFormAction(event) {
+      event.preventDefault();
       const form = document.getElementById('assembledForm');
-      form.action = `${form.part_a.value}/${form.part_b.value}`;
+      form.action = `${document.getElementById('partA').value}/${document.getElementById('partB').value}`;
+      form.submit();
     }
   </script>
 {% endif %}
