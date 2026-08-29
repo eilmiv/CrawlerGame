@@ -71,6 +71,7 @@ class CrawlerGameTests(unittest.TestCase):
         self.assertIn(b"Total crawl trees:</strong> 2", response.data)
         self.assertIn(b"Today's requests:</strong> 4", response.data)
         self.assertIn(b"Today's crawl trees:</strong> 2", response.data)
+        self.assertGreaterEqual(response.data.count(b"Back to home"), 2)
 
     def test_stats_page_shows_recrawled_nodes(self) -> None:
         self.client.get("/play?id=tree-r&started=2026-08-28&counter=3&choices=red")
@@ -109,6 +110,18 @@ class CrawlerGameTests(unittest.TestCase):
         self.assertIn("tree-0", html)
         self.assertIn("tree-99", html)
         self.assertNotIn("tree-100", html)
+
+    def test_stats_page_sorts_cards_by_explored_nodes(self) -> None:
+        self.client.get("/play?id=tree-low&started=2026-08-28&counter=0")
+        self.client.get("/play?id=tree-high&started=2026-08-28&counter=0")
+        self.client.get("/play?id=tree-high&started=2026-08-28&counter=1")
+        self.client.get("/play?id=tree-high&started=2026-08-28&counter=2")
+
+        response = self.client.get("/stats")
+        html = response.data.decode("utf-8")
+        self.assertEqual(response.status_code, 200)
+        self.assertLess(html.find("<h3>tree-high</h3>"), html.find("<h3>tree-low</h3>"))
+        self.assertIn('"counter": 2', html)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 {% block title %}Crawler Game - Statistics{% endblock %}
 {% block content %}
 <h1>Crawler Statistics</h1>
+<p><a href="{{ url_for('home') }}">Back to home</a></p>
 <p>First 100 crawls with detected crawler feature tags.</p>
 <section class="meta">
   <p><strong>Total requests:</strong> {{ global_stats.total_requests }}</p>
