@@ -25,5 +25,53 @@
   {% endfor %}
 </ul>
 
+{% if show_sidequests %}
+  <section class="sidequests">
+    <h2>Sidequests at count 3</h2>
+    <p>Show what your crawler can do:</p>
+    <ul class="links">
+      <li><a class="cta" href="{{ sidequest_urls.base }}">base</a></li>
+      <li><a class="cta" href="{{ sidequest_urls.ignore_robots }}">ignore-robots</a></li>
+      <li><a id="progressive-js-link" class="cta" href="{{ sidequest_urls.nojavascript }}">javascript / nojavascript</a></li>
+      <li><button type="button" class="cta cta-button" onclick="followJavascriptLink()">javascript-link</button></li>
+      <li><a class="cta hidden-link" href="{{ sidequest_urls.hidden_link }}">hidden-link</a></li>
+      <li><span class="plain-url">{{ sidequest_urls.span_link }}</span></li>
+      <li>
+        <form method="get" action="{{ sidequest_urls.form_link }}">
+          <button class="cta cta-button" type="submit">form-link</button>
+        </form>
+      </li>
+      <li>
+        <form method="get" action="/sidequest/form">
+          <input type="hidden" name="id" value="{{ crawler_id }}" readonly>
+          <input type="hidden" name="started" value="{{ started_on }}" readonly>
+          <input type="hidden" name="counter" value="{{ counter }}" readonly>
+          <input type="hidden" name="choices" value="{{ choices|join('-') }}" readonly>
+          <input type="text" name="part_a" value="/sidequest" readonly>
+          <input type="text" name="part_b" value="form" readonly>
+          <button class="cta cta-button" type="submit">form</button>
+        </form>
+      </li>
+      <li>
+        <form method="post" action="{{ sidequest_urls.post }}">
+          <input type="text" name="part_a" value="/sidequest" readonly>
+          <input type="text" name="part_b" value="post" readonly>
+          <button class="cta cta-button" type="submit">post</button>
+        </form>
+      </li>
+    </ul>
+  </section>
+  <script>
+    const progressiveLink = document.getElementById('progressive-js-link');
+    if (progressiveLink) {
+      progressiveLink.href = progressiveLink.href.replace('nojavascript', 'javascript');
+    }
+    const scriptedLink = {{ sidequest_urls.javascript_link|tojson }};
+    function followJavascriptLink() {
+      window.location.assign(scriptedLink);
+    }
+  </script>
+{% endif %}
+
 <p><a href="{{ url_for('stats') }}">Inspect crawler statistics</a></p>
 {% endblock %}

@@ -13,7 +13,7 @@ body {
 }
 
 .panel {
-  width: min(980px, 92vw);
+  width: min(1400px, 96vw);
   background: rgba(7, 9, 18, 0.88);
   border: 1px solid #31467a;
   border-radius: 14px;
@@ -83,4 +83,61 @@ th, td {
 
 th {
   background: #151f3a;
+}
+
+.sidequests {
+  margin-top: 1rem;
+  border: 1px solid #31467a;
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.hidden-link {
+  display: none;
+}
+
+.plain-url {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #c9dcff;
+}
+
+.cta-button {
+  cursor: pointer;
+}
+
+.leaderboard-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0.8rem;
+}
+
+.crawl-card {
+  border: 1px solid #31467a;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: rgba(11, 18, 36, 0.6);
+}
+
+.crawl-card h3 {
+  margin-top: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.crawl-card p {
+  margin: 0.35rem 0;
+  overflow-wrap: anywhere;
+}
+
+.tag {
+  display: inline-block;
+  margin-right: 0.35rem;
+  margin-top: 0.2rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid #4f7cd6;
+  border-radius: 999px;
+  background: #151f3a;
+  font-size: 0.85rem;
 }

@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS request_log (
     started_on TEXT,
     counter INTEGER,
     choices TEXT,
-    user_agent TEXT
+    user_agent TEXT,
+    feature TEXT
 );
 """
 
@@ -58,6 +59,10 @@ def close_db(_exception: BaseException | None = None) -> None:
 def init_db() -> None:
     with sqlite3.connect(DB_PATH) as db:
         db.executescript(SCHEMA)
+        columns = {row[1] for row in db.execute("PRAGMA table_info(request_log)").fetchall()}
+        if "feature" not in columns:
+            db.execute("ALTER TABLE request_log ADD COLUMN feature TEXT")
+        db.commit()
 
 
 _db_initialized = False
@@ -108,6 +113,27 @@ def normalize_params() -> CrawlParams:
     }
 
 
+def detect_feature() -> str | None:
+    if request.path == "/robots.txt":
+        return "robots-txt"
+    if request.path.startswith("/sidequest/"):
+        challenge = request.path.removeprefix("/sidequest/")
+        known_features = {
+            "base",
+            "ignore-robots",
+            "nojavascript",
+            "javascript",
+            "javascript-link",
+            "hidden-link",
+            "span-link",
+            "form-link",
+            "form",
+            "post",
+        }
+        return challenge if challenge in known_features else None
+    return None
+
+
 @app.before_request
 def log_request() -> None:
     ensure_db_initialized()
@@ -117,8 +143,8 @@ def log_request() -> None:
     db.execute(
         """
         INSERT INTO request_log (
-            created_at, method, path, query_string, crawler_id, started_on, counter, choices, user_agent
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, method, path, query_string, crawler_id, started_on, counter, choices, user_agent, feature
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             now_iso(),
@@ -130,6 +156,7 @@ def log_request() -> None:
             params["counter"],
             params["choices"],
             request.headers.get("User-Agent", "unknown"),
+            detect_feature(),
         ),
     )
     db.commit()
@@ -205,6 +232,17 @@ def play() -> str:
             }
         )
 
+    sidequest_urls = {
+        "base": url_for("sidequest", challenge="base", **params),
+        "ignore_robots": url_for("sidequest", challenge="ignore-robots", **params),
+        "nojavascript": url_for("sidequest", challenge="nojavascript", **params),
+        "javascript_link": url_for("sidequest", challenge="javascript-link", **params),
+        "hidden_link": url_for("sidequest", challenge="hidden-link", **params),
+        "span_link": url_for("sidequest", challenge="span-link", _external=True, **params),
+        "form_link": url_for("sidequest", challenge="form-link", **params),
+        "post": url_for("sidequest", challenge="post", **params),
+    }
+
     return render_template(
         "play.html",
         crawler_id=params["id"],
@@ -213,6 +251,8 @@ def play() -> str:
         choices=choice_list,
         is_decision=is_decision,
         next_links=next_links,
+        show_sidequests=counter == 3,
+        sidequest_urls=sidequest_urls,
         metadata={
             "@context": "https://schema.org",
             "@type": "WebPage",
@@ -222,23 +262,57 @@ def play() -> str:
     )
 
 
+@app.route("/robots.txt")
+def robots_txt() -> tuple[str, int, dict[str, str]]:
+    return (
+        "User-agent: *\nDisallow: /sidequest/ignore-robots\n",
+        200,
+        {"Content-Type": "text/plain; charset=utf-8"},
+    )
+
+
+@app.route("/sidequest/<challenge>", methods=["GET", "POST"])
+def sidequest(challenge: str) -> str:
+    params = getattr(g, "crawler_params", normalize_params())
+    continue_url = url_for(
+        "play",
+        id=params["id"],
+        started=params["started"],
+        counter=int(params["counter"]),
+        choices=params["choices"],
+    )
+    return render_template(
+        "sidequest.html",
+        challenge=challenge,
+        continue_url=continue_url,
+        method=request.method,
+    )
+
+
 @app.route("/stats")
 def stats() -> str:
     db = get_db()
     scores = db.execute(
         """
         SELECT
-            crawler_id,
-            MIN(started_on) AS started_on,
+            r.crawler_id,
+            MIN(r.started_on) AS started_on,
             COUNT(*) AS explored_nodes,
-            COUNT(DISTINCT printf('%d|%s', COALESCE(counter, 0), COALESCE(choices, ''))) AS unique_nodes,
-            MAX(COALESCE(counter, 0)) AS deepest_path,
-            MAX(created_at) AS last_request_at
-        FROM request_log
-        WHERE path = '/play' AND crawler_id IS NOT NULL
-        GROUP BY crawler_id
+            COUNT(DISTINCT printf('%d|%s', COALESCE(r.counter, 0), COALESCE(r.choices, ''))) AS unique_nodes,
+            MAX(COALESCE(r.counter, 0)) AS deepest_path,
+            MIN(r.id) AS first_log_id,
+            MIN(r.created_at) AS first_request_at,
+            MAX(r.created_at) AS last_request_at,
+            (
+                SELECT GROUP_CONCAT(DISTINCT feature)
+                FROM request_log f
+                WHERE f.crawler_id = r.crawler_id AND f.feature IS NOT NULL AND f.feature != ''
+            ) AS feature_tags
+        FROM request_log r
+        WHERE r.path = '/play' AND r.crawler_id IS NOT NULL
+        GROUP BY r.crawler_id
         ORDER BY explored_nodes DESC, deepest_path DESC, last_request_at DESC
-        LIMIT 10
+        LIMIT 100
         """
     ).fetchall()
 
@@ -286,6 +360,8 @@ def stats() -> str:
                 agents.append(user_agent)
             if len(agents) >= 3:
                 break
+        feature_csv = row["feature_tags"] or ""
+        feature_tags = sorted({tag for tag in str(feature_csv).split(",") if tag})
         formatted_scores.append(
             {
                 "crawler_id": row["crawler_id"],
@@ -293,8 +369,10 @@ def stats() -> str:
                 "explored_nodes": row["explored_nodes"],
                 "recrawled_nodes": row["explored_nodes"] - row["unique_nodes"],
                 "deepest_path": row["deepest_path"],
+                "first_request_at": row["first_request_at"],
                 "last_request_at": row["last_request_at"],
                 "user_agents": agents,
+                "feature_tags": feature_tags,
             }
         )
 
