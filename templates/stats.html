@@ -2,7 +2,7 @@
 {% block title %}Crawler Game - Statistics{% endblock %}
 {% block content %}
 <h1>Crawler Statistics</h1>
-<p>Top crawler trees by explored nodes.</p>
+<p>First 100 crawls with detected crawler feature tags.</p>
 <section class="meta">
   <p><strong>Total requests:</strong> {{ global_stats.total_requests }}</p>
   <p><strong>Total crawl trees:</strong> {{ global_stats.total_crawl_trees }}</p>
@@ -41,36 +41,31 @@
 </script>
 {% endif %}
 
-<table>
-  <thead>
-    <tr>
-      <th>UUID</th>
-      <th>Started</th>
-      <th>Nodes</th>
-      <th>Recrawled Nodes</th>
-      <th>Deepest Path</th>
-      <th>Last Request</th>
-      <th>User Agent Samples</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in scores %}
-    <tr>
-      <td>{{ row.crawler_id }}</td>
-      <td>{{ row.started_on }}</td>
-      <td>{{ row.explored_nodes }}</td>
-      <td>{{ row.recrawled_nodes }}</td>
-      <td>{{ row.deepest_path }}</td>
-      <td>{{ row.last_request_at }}</td>
-      <td>{{ row.user_agents|join(' | ') }}</td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="7">No crawl data yet. Send a crawler into the dungeon.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<section class="leaderboard-grid">
+  {% for row in scores %}
+  <article class="crawl-card">
+    <h3>{{ row.crawler_id }}</h3>
+    <p><strong>Started:</strong> {{ row.started_on }}</p>
+    <p><strong>First request:</strong> {{ row.first_request_at }}</p>
+    <p><strong>Nodes:</strong> {{ row.explored_nodes }}</p>
+    <p><strong>Recrawled Nodes:</strong> {{ row.recrawled_nodes }}</p>
+    <p><strong>Deepest Path:</strong> {{ row.deepest_path }}</p>
+    <p><strong>Last Request:</strong> {{ row.last_request_at }}</p>
+    <p><strong>User Agents:</strong> {{ row.user_agents|join(' | ') if row.user_agents else 'none' }}</p>
+    <p><strong>Tags:</strong>
+      {% if row.feature_tags %}
+        {% for tag in row.feature_tags %}
+          <span class="tag">{{ tag }}</span>
+        {% endfor %}
+      {% else %}
+        none
+      {% endif %}
+    </p>
+  </article>
+  {% else %}
+  <p>No crawl data yet. Send a crawler into the dungeon.</p>
+  {% endfor %}
+</section>
 
 <p><a href="{{ url_for('home') }}">Back to home</a></p>
 {% endblock %}

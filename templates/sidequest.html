@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Crawler Game - Sidequest {{ challenge }}{% endblock %}
+{% block content %}
+<h1>Sidequest: {{ challenge }}</h1>
+<p>This sidequest request was recorded for feature detection.</p>
+<p>Method used: <strong>{{ method }}</strong></p>
+<p><a class="cta" href="{{ continue_url }}">Continue the main crawl</a></p>
+<p><a href="{{ url_for('stats') }}">Inspect crawler statistics</a></p>
+{% endblock %}

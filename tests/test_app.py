@@ -1,6 +1,5 @@
 import importlib
 import os
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -44,6 +43,21 @@ class CrawlerGameTests(unittest.TestCase):
         self.assertIn(b"Continue deeper", response.data)
         self.assertNotIn(b"Take the Red Portal", response.data)
 
+    def test_counter_three_shows_sidequests(self) -> None:
+        response = self.client.get("/play?id=tree-side&started=2026-08-28&counter=3")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Sidequests at count 3", response.data)
+        self.assertIn(b"ignore-robots", response.data)
+        self.assertIn(b"javascript-link", response.data)
+        self.assertIn(b"form-link", response.data)
+
+    def test_robots_txt_disallows_ignore_robots(self) -> None:
+        response = self.client.get("/robots.txt")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Disallow: /sidequest/ignore-robots", response.data)
+
     def test_stats_page_shows_global_totals(self) -> None:
         self.client.get("/")
         self.client.get("/play?id=tree-a&started=2026-08-28&counter=0")
@@ -63,14 +77,36 @@ class CrawlerGameTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Recrawled Nodes", response.data)
+        self.assertIn(b"tree-r", response.data)
+        self.assertIn(b"Nodes:</strong> 2", response.data)
+        self.assertIn(b"Recrawled Nodes:</strong> 1", response.data)
+
+    def test_stats_page_shows_feature_tags(self) -> None:
+        base_url = "/sidequest/base?id=tree-f&started=2026-08-28&counter=3&choices="
+        form_link_url = "/sidequest/form-link?id=tree-f&started=2026-08-28&counter=3&choices="
+        post_url = "/sidequest/post?id=tree-f&started=2026-08-28&counter=3&choices="
+        self.client.get("/play?id=tree-f&started=2026-08-28&counter=3")
+        self.client.get(base_url)
+        self.client.get(form_link_url)
+        self.client.post(post_url, data={"part_a": "/sidequest", "part_b": "post"})
+        response = self.client.get("/stats")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"tree-f", response.data)
+        self.assertIn(b"<span class=\"tag\">base</span>", response.data)
+        self.assertIn(b"<span class=\"tag\">form-link</span>", response.data)
+        self.assertIn(b"<span class=\"tag\">post</span>", response.data)
+
+    def test_stats_page_shows_first_100_crawls(self) -> None:
+        for idx in range(101):
+            self.client.get(f"/play?id=tree-{idx}&started=2026-08-28&counter=0")
+
+        response = self.client.get("/stats")
         html = response.data.decode("utf-8")
-        self.assertRegex(
-            html,
-            re.compile(
-                r"<td>tree-r</td>\s*<td>2026-08-28</td>\s*<td>2</td>\s*<td>1</td>\s*<td>3</td>",
-                re.MULTILINE,
-            ),
-        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("tree-0", html)
+        self.assertIn("tree-99", html)
+        self.assertNotIn("tree-100", html)
 
 
 if __name__ == "__main__":
