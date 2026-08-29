@@ -51,6 +51,8 @@ class CrawlerGameTests(unittest.TestCase):
         self.assertIn(b"ignore-robots", response.data)
         self.assertIn(b"javascript-link", response.data)
         self.assertIn(b"form-link", response.data)
+        self.assertIn(b"<form method=\"get\" action=\"/sidequest/form\">", response.data)
+        self.assertNotIn(b"onsubmit=\"assembleGetFormAction(event)\"", response.data)
 
     def test_robots_txt_disallows_ignore_robots(self) -> None:
         response = self.client.get("/robots.txt")

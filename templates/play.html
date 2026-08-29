@@ -42,13 +42,13 @@
         </form>
       </li>
       <li>
-        <form id="assembledForm" method="get" action="/sidequest/form" onsubmit="assembleGetFormAction(event)">
+        <form method="get" action="/sidequest/form">
           <input type="hidden" name="id" value="{{ crawler_id }}" readonly>
           <input type="hidden" name="started" value="{{ started_on }}" readonly>
           <input type="hidden" name="counter" value="{{ counter }}" readonly>
           <input type="hidden" name="choices" value="{{ choices|join('-') }}" readonly>
-          <input id="partA" type="text" value="/sidequest" readonly>
-          <input id="partB" type="text" value="form" readonly>
+          <input type="text" name="part_a" value="/sidequest" readonly>
+          <input type="text" name="part_b" value="form" readonly>
           <button class="cta cta-button" type="submit">form</button>
         </form>
       </li>
@@ -69,12 +69,6 @@
     const scriptedLink = {{ sidequest_urls.javascript_link|tojson }};
     function followJavascriptLink() {
       window.location.assign(scriptedLink);
-    }
-    function assembleGetFormAction(event) {
-      event.preventDefault();
-      const form = document.getElementById('assembledForm');
-      form.action = `${document.getElementById('partA').value}/${document.getElementById('partB').value}`;
-      form.submit();
     }
   </script>
 {% endif %}
