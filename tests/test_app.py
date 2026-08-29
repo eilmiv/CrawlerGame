@@ -111,7 +111,9 @@ class CrawlerGameTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Top 100 highscores", html)
         self.assertIn("tree-100", html)
-        self.assertLess(html.find("<h3>tree-100</h3>"), html.find("<h3>tree-0</h3>"))
+        first_card_start = html.find("<article class=\"crawl-card\">")
+        first_card_end = html.find("</article>", first_card_start)
+        self.assertIn("<h3>tree-100</h3>", html[first_card_start:first_card_end])
         self.assertEqual(html.count("<article class=\"crawl-card\">"), 100)
 
     def test_stats_page_sorts_cards_by_explored_nodes(self) -> None:
