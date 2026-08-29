@@ -100,16 +100,19 @@ class CrawlerGameTests(unittest.TestCase):
         self.assertIn(b"<span class=\"tag\">form-link</span>", response.data)
         self.assertIn(b"<span class=\"tag\">post</span>", response.data)
 
-    def test_stats_page_shows_first_100_crawls(self) -> None:
+    def test_stats_page_shows_top_100_highscores(self) -> None:
         for idx in range(101):
             self.client.get(f"/play?id=tree-{idx}&started=2026-08-28&counter=0")
+        for depth in range(3):
+            self.client.get(f"/play?id=tree-100&started=2026-08-28&counter={depth}")
 
         response = self.client.get("/stats")
         html = response.data.decode("utf-8")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("tree-0", html)
-        self.assertIn("tree-99", html)
-        self.assertNotIn("tree-100", html)
+        self.assertIn("Top 100 highscores", html)
+        self.assertIn("tree-100", html)
+        self.assertLess(html.find("<h3>tree-100</h3>"), html.find("<h3>tree-0</h3>"))
+        self.assertEqual(html.count("<article class=\"crawl-card\">"), 100)
 
     def test_stats_page_sorts_cards_by_explored_nodes(self) -> None:
         self.client.get("/play?id=tree-low&started=2026-08-28&counter=0")

@@ -294,17 +294,6 @@ def stats() -> str:
     db = get_db()
     scores = db.execute(
         """
-        WITH first_100 AS (
-            SELECT crawler_id
-            FROM (
-                SELECT crawler_id, MIN(id) AS first_log_id
-                FROM request_log
-                WHERE path = '/play' AND crawler_id IS NOT NULL
-                GROUP BY crawler_id
-                ORDER BY first_log_id ASC
-                LIMIT 100
-            )
-        )
         SELECT
             r.crawler_id,
             MIN(r.started_on) AS started_on,
@@ -320,10 +309,10 @@ def stats() -> str:
                 WHERE f.crawler_id = r.crawler_id AND f.feature IS NOT NULL AND f.feature != ''
             ) AS feature_tags
         FROM request_log r
-        INNER JOIN first_100 first ON first.crawler_id = r.crawler_id
         WHERE r.path = '/play' AND r.crawler_id IS NOT NULL
         GROUP BY r.crawler_id
         ORDER BY explored_nodes DESC, deepest_path DESC, last_request_at DESC
+        LIMIT 100
         """
     ).fetchall()
 
